@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.example.ansambassamabdulhamid.ledapp.MainActivity">
+<LinearLayout
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+    <EditText
+        android:id="@+id/textMessage"
+        android:layout_width="180dp"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Enter message"
+        android:inputType="textPersonName"
+        android:layout_marginStart="16dp" />
+
+    <Button
+        android:id="@+id/publishMessage"
+        android:layout_width="124dp"
+        android:layout_height="48dp"
+        android:text="Publish"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp" />
+</LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+    <EditText
+        android:id="@+id/subscribeTopic"
+        android:layout_width="178dp"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Subscribe topic"
+        android:inputType="textPersonName"
+        android:layout_marginStart="16dp" />
+
+    <Button
+        android:id="@+id/subscribe"
+        android:layout_width="124dp"
+        android:layout_height="48dp"
+        android:text="Subscribe"
+        app:layout_constraintHorizontal_bias="0.0"
+        android:layout_marginEnd="8dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+    <EditText
+        android:id="@+id/unSubscribeTopic"
+        android:layout_width="180dp"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Unsubscribe topic"
+        android:inputType="textPersonName" />
+
+    <Button
+        android:id="@+id/unSubscribe"
+        android:layout_width="124dp"
+        android:layout_height="48dp"
+        android:text="UnSubscribe" />
+    </LinearLayout>
+    <Button
+        android:id="@+id/receive"
+        android:layout_width="124dp"
+        android:layout_height="48dp"
+        android:text="Receive"/>
+
+    <TextView
+        android:id="@+id/tv_receivedData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="My received data from the Bluetooth device" />
+
+
+    <TextView
+        android:id="@+id/testView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/txtString"
+        android:text=""
+        android:textSize="15sp" />
+
+    <TextView
+        android:id="@+id/txtString"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:layout_alignLeft="@+id/testView1"
+        android:layout_alignParentBottom="true"
+        android:text=""
+        android:textSize="15sp"
+        tools:layout_editor_absoluteY="0dp"
+        tools:layout_editor_absoluteX="0dp" />
+
+    <TextView
+        android:id="@+id/sensorView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sensorView0"
+        android:layout_centerHorizontal="true"
+        android:text="Sensor 1 Voltage = ????"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_marginTop="14dp"
+        app:layout_constraintTop_toBottomOf="@+id/sensorView0"
+        android:layout_marginLeft="135dp"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+    <TextView
+        android:id="@+id/sensorView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sensorView1"
+        android:layout_centerHorizontal="true"
+        android:text="Sensor 2 Voltage = ????"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_marginTop="13dp"
+        app:layout_constraintTop_toBottomOf="@+id/sensorView1"
+        android:layout_marginLeft="135dp"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+    <TextView
+        android:id="@+id/sensorView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/sensorView2"
+        android:layout_centerHorizontal="true"
+        android:text="Sensor 3 Voltage = ????"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_marginTop="17dp"
+        app:layout_constraintTop_toBottomOf="@+id/sensorView2"
+        android:layout_marginLeft="158dp"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+    <TextView
+        android:id="@+id/sensorView0"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:text="Sensor 0 Voltage = ????"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_marginTop="21dp"
+        app:layout_constraintTop_toBottomOf="@+id/tv_receivedData"
+        android:layout_marginLeft="126dp"
+        app:layout_constraintLeft_toLeftOf="parent" />
+
+</LinearLayout>
