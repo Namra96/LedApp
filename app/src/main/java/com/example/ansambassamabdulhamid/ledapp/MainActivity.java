@@ -19,18 +19,22 @@ import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.UUID;
 
+import weka.classifiers.trees.J48;
+import weka.core.Instances;
 import wekaizing.WekaClassifier;
 import wekaizing.WekaData;
-
-import static android.text.TextUtils.split;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -38,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private MqttAndroidClient client;
     private String TAG = "MainActivity";
     private PahoMqttClient pahoMqttClient;
-    static String inputString = null;
+    static String  inputString = null;
 
     private EditText textMessage, subscribeTopic, unSubscribeTopic;
     private Button publishMessage, subscribe, unSubscribe, receive;
@@ -47,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     WekaClassifier classifier;
     int counterg = 0;
     int insNum = 20; //length of sliding window
+    String gesture = "none";
 
 
 
@@ -57,9 +62,12 @@ public class MainActivity extends AppCompatActivity {
     final int handlerState = 0;        				 //used to identify handler message
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
-    private StringBuilder recDataString = new StringBuilder();
+    private ArrayList<String> recDataString = new ArrayList<>();
+    private String[] liveDataString = new String[120];
 
     private ConnectedThread mConnectedThread;
+
+    int n = 0;
 
     // SPP UUID service - this should work for most devices
     private static final UUID BTMODULEUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
@@ -69,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
    // String liveData[] = new String[120];
     Object[] liveData = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-
+     Instances train;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,27 +166,97 @@ public class MainActivity extends AppCompatActivity {
             public void handleMessage(Message msg) {
                 if (msg.what == handlerState) {//if message is what we want
 
+                    //"/Users/namragill/Desktop/TEST.rtf"
+
                     // load training data
                     BufferedReader breader = null;
-                    try {
-                        breader = new BufferedReader (new FileReader("/Users/namragill/Desktop/smoothed_train_data.arff"));
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                 /*   Instances train = null;
-                    try {
-                        train = new Instances(breader);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    train.setClassIndex(train.numAttributes() -1);*/
-                    // load live data in vector
-                    inputString = (String) msg.obj;
-                    recDataString.append(inputString);
-                    Log.d("RECIEVED", inputString);//keep appending to string until ~
+                    //File yourFile = getFileStreamPath("Users/namragill/Desktop/smoothed_train_data.arff");
+
+                        //breader = new BufferedReader(new FileReader(("/Users//namragill//Downloads//LedApp//app//src//main//res//smoothed_train_data.arff")));
+
+                        try {
+
+                            breader = new BufferedReader(
+                                    new InputStreamReader(getAssets().open("smoothed_train_data.arff")));
+                             train = new Instances (breader);
+                            train.setClassIndex(train.numAttributes() -1);
 
 
-                    if (inputString != null && inputString.length() > 0) {
+                            if ((breader.readLine()) != null) {
+                              //  Log.d("MSG", mLine);
+                            }
+                            inputString = (String) msg.obj;
+
+                           // recDataString.add(inputString);
+
+
+                           liveDataString[n] = inputString;
+                            Log.d("MSG", liveDataString[n]);
+                            n++;
+
+                            /*
+                            breader = new BufferedReader (new FileReader(fileDir.toString()));
+                            Instances test = new Instances (breader);
+                            test.setClassIndex(test.numAttributes() -1);
+                            */
+
+
+
+
+                         //   recDataString.append(inputString);
+                            Log.d("RECIEVED", String.valueOf(inputString));//keep appending to string until ~
+
+
+                        }catch (IOException e){
+
+                        }finally{
+                            if(breader != null){
+                                try{
+
+                                    File file = new File("myFile.txt");
+                                    FileWriter writer = new FileWriter(file, true);
+                                    PrintWriter output = new PrintWriter(writer);
+                                    Log.d("File","declared");
+
+                                    for(int i = 0; i < liveDataString.length; i++)
+                                        output.println(liveDataString[i]);
+                                    output.close();
+                                    Log.d("File","CREATED");
+
+                                    BufferedReader bf = new BufferedReader (new FileReader(file.getAbsolutePath()));
+                                    Log.d("After","BufferReader");
+                                    Instances testInstance = new Instances (bf);
+                                    testInstance.setClassIndex(testInstance.numAttributes() -1);
+                                    bf.close();
+                                    Log.d("CLOSED","BufferReader");
+
+                                    breader.close();
+                                        Log.d("CLOSED","breader");
+                                    J48 tree = new J48();         // new instance of tree
+                                    tree.buildClassifier(train);
+
+                                    int classIndex = train.numAttributes() -1;
+                                    Instances labeled = new Instances(testInstance);
+                                                 Log.d("Before","Forloop");
+                                    for (int i = 0; i < testInstance.numInstances(); i++){
+                                        double clsLabel = tree.classifyInstance(testInstance.instance(i)) ;
+                                        labeled.instance(i).setClassValue(clsLabel);
+                                        Log.d("GESTURE",labeled.instance(i).attribute(classIndex).value((int) clsLabel));
+                                    }
+
+                                }catch (IOException e){
+
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+
+
+
+
+
+                 /*   if (inputString != null && inputString.length() > 0) {
                         String [] inputStringArr = split(inputString, ",");
                         if (inputStringArr.length >= 7 && inputStringArr[0].equals("h")) { //  we have 7 elements
                             int xAccel = Integer.parseInt(inputStringArr[1]);
@@ -207,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
                             }
 
 
-                    }
+                    } */
                     /*
                     mydata = new WekaData("/Users/namragill/Desktop/live_data.arff"); //Initialize a WekaData with empty attributes and dataset
                     // upload trainig data
@@ -244,6 +322,24 @@ public class MainActivity extends AppCompatActivity {
         return  device.createRfcommSocketToServiceRecord(BTMODULEUUID);
         //creates secure outgoing connecetion with BT device using UUID
     }
+
+  /*  public void sendGesture(){
+        switch (gesture){
+            case "right":
+                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                break;
+            case "left":
+                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                break;
+            case "up":
+                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                break;
+            case "down":
+                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                break;
+        }
+    }
+    */
 
 
     @Override
