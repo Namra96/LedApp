@@ -19,23 +19,17 @@ import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.UUID;
 
 import weka.classifiers.trees.J48;
+import weka.core.DenseInstance;
 import weka.core.Instances;
-import wekaizing.WekaClassifier;
-import wekaizing.WekaData;
-
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,11 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private EditText textMessage, subscribeTopic, unSubscribeTopic;
     private Button publishMessage, subscribe, unSubscribe, receive;
     TextView myLabel;
-    WekaData mydata;
-    WekaClassifier classifier;
     int counterg = 0;
     int insNum = 20; //length of sliding window
-    String gesture = "none";
 
 
 
@@ -64,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothSocket btSocket = null;
     private ArrayList<String> recDataString = new ArrayList<>();
     private String[] liveDataString = new String[120];
+    private Instances tempTrain;
 
     private ConnectedThread mConnectedThread;
 
@@ -75,8 +67,7 @@ public class MainActivity extends AppCompatActivity {
     // String for MAC address
     private static String address;
 
-   // String liveData[] = new String[120];
-    Object[] liveData = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+    private double[] liveData = new double[121];
      Instances train;
 
     @Override
@@ -166,144 +157,73 @@ public class MainActivity extends AppCompatActivity {
             public void handleMessage(Message msg) {
                 if (msg.what == handlerState) {//if message is what we want
 
-                    //"/Users/namragill/Desktop/TEST.rtf"
-
                     // load training data
                     BufferedReader breader = null;
-                    //File yourFile = getFileStreamPath("Users/namragill/Desktop/smoothed_train_data.arff");
-
-                        //breader = new BufferedReader(new FileReader(("/Users//namragill//Downloads//LedApp//app//src//main//res//smoothed_train_data.arff")));
 
                         try {
 
                             breader = new BufferedReader(
-                                    new InputStreamReader(getAssets().open("smoothed_train_data.arff")));
-                             train = new Instances (breader);
+                                    new InputStreamReader(getAssets().open("all_train_data.arff")));
+                            train = new Instances (breader);
+
+                            tempTrain = new Instances(train);
+
                             train.setClassIndex(train.numAttributes() -1);
+                            tempTrain.setClassIndex(tempTrain.numAttributes() -1);
+                            tempTrain.clear();
 
+                            J48 tree = new J48();         // new instance of tree
+                            tree.buildClassifier(train);
 
-                            if ((breader.readLine()) != null) {
-                              //  Log.d("MSG", mLine);
-                            }
+                            //Load live data
                             inputString = (String) msg.obj;
 
-                           // recDataString.add(inputString);
+                            if (inputString != null && inputString.length() > 0) {
+                                StringBuilder sb = new StringBuilder(inputString);
+                                String res = "";
+                                for(int i = 0; i < sb.length(); i++){
+                                    if(sb.charAt(i) != ',' && sb.charAt(i) != 'h' && sb.charAt(i) != ' '){
+                                        res += sb.charAt(i);
+                                    }else {
+                                        if(n <= 120){
+                                            if(!res.equals("")){
+                                                Log.d("RES", res);
+                                                liveDataString[n] = res;
+                                                liveData[n] = Double.parseDouble(liveDataString[n]); // Another common reason for NumberFormatException is the alphanumeric input. No non-numeric letter other than + and - is not permitted in the input string.
+                                                Log.i("CONTENT", ""+liveData[n]);
+                                                n++;
+                                                res = "";
+                                                Log.d("INDEX", ""+n);
+                                            }
 
 
-                           liveDataString[n] = inputString;
-                            Log.d("MSG", liveDataString[n]);
-                            n++;
+                                        }
+                                    }
+                                }
 
-                            /*
-                            breader = new BufferedReader (new FileReader(fileDir.toString()));
-                            Instances test = new Instances (breader);
-                            test.setClassIndex(test.numAttributes() -1);
-                            */
+                            }
 
+                            if (n >= 100){
+                                n = 0;
+                                tempTrain.add(new DenseInstance(1.0,liveData));
+                                int classIndex = tempTrain.numAttributes()-1;
+                                int numInstances = tempTrain.numInstances()-1;
+                                double classLabel = 0;
+                                classLabel = tree.classifyInstance(tempTrain.instance(numInstances));
+                                tempTrain.instance(numInstances).setClassValue(classLabel);
+                                String gesture = tempTrain.instance(numInstances).attribute(classIndex).value((int)classLabel);
+                                Log.d("GESTURE",gesture);
+                                sendGesture(gesture);
+                                Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
 
-
-
-                         //   recDataString.append(inputString);
-                            Log.d("RECIEVED", String.valueOf(inputString));//keep appending to string until ~
-
+                            }
 
                         }catch (IOException e){
 
-                        }finally{
-                            if(breader != null){
-                                try{
-
-                                    File file = new File("myFile.txt");
-                                    FileWriter writer = new FileWriter(file, true);
-                                    PrintWriter output = new PrintWriter(writer);
-                                    Log.d("File","declared");
-
-                                    for(int i = 0; i < liveDataString.length; i++)
-                                        output.println(liveDataString[i]);
-                                    output.close();
-                                    Log.d("File","CREATED");
-
-                                    BufferedReader bf = new BufferedReader (new FileReader(file.getAbsolutePath()));
-                                    Log.d("After","BufferReader");
-                                    Instances testInstance = new Instances (bf);
-                                    testInstance.setClassIndex(testInstance.numAttributes() -1);
-                                    bf.close();
-                                    Log.d("CLOSED","BufferReader");
-
-                                    breader.close();
-                                        Log.d("CLOSED","breader");
-                                    J48 tree = new J48();         // new instance of tree
-                                    tree.buildClassifier(train);
-
-                                    int classIndex = train.numAttributes() -1;
-                                    Instances labeled = new Instances(testInstance);
-                                                 Log.d("Before","Forloop");
-                                    for (int i = 0; i < testInstance.numInstances(); i++){
-                                        double clsLabel = tree.classifyInstance(testInstance.instance(i)) ;
-                                        labeled.instance(i).setClassValue(clsLabel);
-                                        Log.d("GESTURE",labeled.instance(i).attribute(classIndex).value((int) clsLabel));
-                                    }
-
-                                }catch (IOException e){
-
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
 
-
-
-
-
-                 /*   if (inputString != null && inputString.length() > 0) {
-                        String [] inputStringArr = split(inputString, ",");
-                        if (inputStringArr.length >= 7 && inputStringArr[0].equals("h")) { //  we have 7 elements
-                            int xAccel = Integer.parseInt(inputStringArr[1]);
-                            int yAccel = Integer.parseInt(inputStringArr[2]);
-                            int zAccel = Integer.parseInt(inputStringArr[3]);
-                            int vRef = Integer.parseInt(inputStringArr[4]);
-                            int xRate = Integer.parseInt(inputStringArr[5]);
-                            int yRate = Integer.parseInt(inputStringArr[6]);
-                                //Add Acc and gyr attributes to the object
-                                liveData[6*(counterg)] = xAccel;
-                                liveData[6*(counterg)+1] = yAccel;
-                                liveData[6*(counterg)+2] = zAccel;
-                                liveData[6*(counterg)+3] = vRef;
-                                liveData[6*(counterg)+4] = xRate;
-                                liveData[6*(counterg)+5] = yRate;
-                                counterg++;
-                                //Predict the class (the gestures "up", "right","left","down" ... are assigned to numbers 1,2,3,4 ...)
-                                String []gesture = {"up", "down","left","right","tilt_left","tilt_right"};
-                                if (counterg == insNum) {
-                                    liveData[insNum] = 9;
-                                    counterg = 0;
-                                    int pred = classifier.Classify(liveData);
-                                    Toast.makeText(getApplicationContext(), "Detected Gesture:"+gesture[pred], Toast.LENGTH_SHORT).show();
-                                    Log.i("detected Gesture:", gesture[pred]);
-                                }
-                            }
-
-
-                    } */
-                    /*
-                    mydata = new WekaData("/Users/namragill/Desktop/live_data.arff"); //Initialize a WekaData with empty attributes and dataset
-                    // upload trainig data
-                    classifier = new WekaClassifier(WekaClassifier.LOGISTIC);//Initialize a new classifier with KStar algorithm
-                    classifier.Build(mydata);
-
-                    try {
-                        breader.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    J48 tree = new J48();         // new instance of tree
-                    try {
-                        tree.buildClassifier(train);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    //now use the readmessage and label each gesture read*/
 
                 }
 
@@ -323,23 +243,23 @@ public class MainActivity extends AppCompatActivity {
         //creates secure outgoing connecetion with BT device using UUID
     }
 
-  /*  public void sendGesture(){
+    public void sendGesture(String gesture) throws MqttException, UnsupportedEncodingException {
         switch (gesture){
             case "right":
-                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                    pahoMqttClient.publishMessage(client, "right", 1, Constants.PUBLISH_TOPIC);
                 break;
             case "left":
-                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "left", 1, Constants.PUBLISH_TOPIC);
                 break;
             case "up":
-                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "up", 1, Constants.PUBLISH_TOPIC);
                 break;
             case "down":
-                pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "down", 1, Constants.PUBLISH_TOPIC);
                 break;
         }
     }
-    */
+
 
 
     @Override
