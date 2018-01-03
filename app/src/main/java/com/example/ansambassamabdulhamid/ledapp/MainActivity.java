@@ -24,14 +24,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.UUID;
 
 import weka.classifiers.trees.J48;
 import weka.core.DenseInstance;
 import weka.core.Instances;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private MqttAndroidClient client;
     private String TAG = "MainActivity";
@@ -39,21 +38,14 @@ public class MainActivity extends AppCompatActivity {
     static String  inputString = null;
 
     private EditText textMessage, subscribeTopic, unSubscribeTopic;
-    private Button publishMessage, subscribe, unSubscribe, receive;
-    TextView myLabel;
-    int counterg = 0;
-    int insNum = 20; //length of sliding window
+    private Button btnConnect, subscribe, unSubscribe, receive;
 
-
-
-
-    TextView txtArduino, txtString, txtStringLength, sensorView0, sensorView1, sensorView2, sensorView3;
+    TextView txtGesture;
     Handler bluetoothIn;
 
     final int handlerState = 0;        				 //used to identify handler message
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
-    private ArrayList<String> recDataString = new ArrayList<>();
     private String[] liveDataString = new String[120];
     private Instances tempTrain;
 
@@ -68,177 +60,53 @@ public class MainActivity extends AppCompatActivity {
     private static String address;
 
     private double[] liveData = new double[121];
-     Instances train;
+    Instances train;
+    static J48 tree;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        pahoMqttClient = new PahoMqttClient();
+        initialise();
 
-        myLabel = (TextView) findViewById(R.id.tv_receivedData);
+        BufferedReader breader = null;
+        try {
+            breader = new BufferedReader(
+                    new InputStreamReader(getAssets().open("all_train_data.arff")));
+            train = new Instances (breader);
+            tempTrain = new Instances(train);
+            train.setClassIndex(train.numAttributes() -1);
+            tempTrain.setClassIndex(tempTrain.numAttributes() -1);
+            tempTrain.clear();
 
-        textMessage = (EditText) findViewById(R.id.textMessage);
-        publishMessage = (Button) findViewById(R.id.publishMessage);
+            tree = new J48();         // new instance of tree
+            try {
+                tree.buildClassifier(train);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
+            btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
+        checkBTState();
+        bluetoothReader();
+    } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void initialise() {
+        btnConnect = (Button) findViewById(R.id.connect);
         subscribe = (Button) findViewById(R.id.subscribe);
         unSubscribe = (Button) findViewById(R.id.unSubscribe);
-        receive = (Button) findViewById(R.id.receive);
 
         subscribeTopic = (EditText) findViewById(R.id.subscribeTopic);
         unSubscribeTopic = (EditText) findViewById(R.id.unSubscribeTopic);
-        client = pahoMqttClient.getMqttClient(getApplicationContext(), Constants.MQTT_BROKER_URL, Constants.CLIENT_ID);
+        txtGesture = (TextView)findViewById(R.id.tv_receivedGesture);
 
-        publishMessage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String msg = textMessage.getText().toString().trim();
-                if (!msg.isEmpty()) {
-                    try {
-                        pahoMqttClient.publishMessage(client, msg, 1, Constants.PUBLISH_TOPIC);
-
-                    } catch (MqttException e) {
-                        e.printStackTrace();
-                    } catch (UnsupportedEncodingException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        receive.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });
-
-        subscribe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String topic = subscribeTopic.getText().toString().trim();
-                if (!topic.isEmpty()) {
-                    try {
-                        pahoMqttClient.subscribe(client, topic, 1);
-                    } catch (MqttException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        unSubscribe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String topic = unSubscribeTopic.getText().toString().trim();
-                if (!topic.isEmpty()) {
-                    try {
-                        pahoMqttClient.unSubscribe(client, topic);
-                    } catch (MqttException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        Intent intent = new Intent(MainActivity.this, MqttMessageService.class);
-        startService(intent);
-
-
-
-        //Link the buttons and textViews to respective views
-        txtString = (TextView) findViewById(R.id.txtString);
-        txtStringLength = (TextView) findViewById(R.id.testView1);
-        sensorView0 = (TextView) findViewById(R.id.sensorView0);
-        sensorView1 = (TextView) findViewById(R.id.sensorView1);
-        sensorView2 = (TextView) findViewById(R.id.sensorView2);
-        sensorView3 = (TextView) findViewById(R.id.sensorView3);
-
-        bluetoothIn = new Handler() {
-            public void handleMessage(Message msg) {
-                if (msg.what == handlerState) {//if message is what we want
-
-                    // load training data
-                    BufferedReader breader = null;
-
-                        try {
-
-                            breader = new BufferedReader(
-                                    new InputStreamReader(getAssets().open("all_train_data.arff")));
-                            train = new Instances (breader);
-
-                            tempTrain = new Instances(train);
-
-                            train.setClassIndex(train.numAttributes() -1);
-                            tempTrain.setClassIndex(tempTrain.numAttributes() -1);
-                            tempTrain.clear();
-
-                            J48 tree = new J48();         // new instance of tree
-                            tree.buildClassifier(train);
-
-                            //Load live data
-                            inputString = (String) msg.obj;
-
-                            if (inputString != null && inputString.length() > 0) {
-                                StringBuilder sb = new StringBuilder(inputString);
-                                String res = "";
-                                for(int i = 0; i < sb.length(); i++){
-                                    if(sb.charAt(i) != ',' && sb.charAt(i) != 'h' && sb.charAt(i) != ' '){
-                                        res += sb.charAt(i);
-                                    }else {
-                                        if(n <= 120){
-                                            if(!res.equals("")){
-                                                Log.d("RES", res);
-                                                liveDataString[n] = res;
-                                                liveData[n] = Double.parseDouble(liveDataString[n]); // Another common reason for NumberFormatException is the alphanumeric input. No non-numeric letter other than + and - is not permitted in the input string.
-                                                Log.i("CONTENT", ""+liveData[n]);
-                                                n++;
-                                                res = "";
-                                                Log.d("INDEX", ""+n);
-                                            }
-
-
-                                        }
-                                    }
-                                }
-
-                            }
-
-                            if (n >= 100){
-                                n = 0;
-                                tempTrain.add(new DenseInstance(1.0,liveData));
-                                int classIndex = tempTrain.numAttributes()-1;
-                                int numInstances = tempTrain.numInstances()-1;
-                                double classLabel = 0;
-                                classLabel = tree.classifyInstance(tempTrain.instance(numInstances));
-                                tempTrain.instance(numInstances).setClassValue(classLabel);
-                                String gesture = tempTrain.instance(numInstances).attribute(classIndex).value((int)classLabel);
-                                Log.d("GESTURE",gesture);
-                                sendGesture(gesture);
-                                Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
-
-                            }
-
-                        }catch (IOException e){
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-
-                }
-
-                }
-
-        };
-
-        btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
-        checkBTState();
-
-
+        btnConnect.setOnClickListener(this);
     }
 
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
-
         return  device.createRfcommSocketToServiceRecord(BTMODULEUUID);
         //creates secure outgoing connecetion with BT device using UUID
     }
@@ -260,7 +128,75 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private class BluetoothReader extends Thread{
 
+    }
+
+    private void bluetoothReader(){
+
+        bluetoothIn = new Handler() {
+            public void handleMessage(Message msg) {
+                if (msg.what == handlerState) {//if message is what we want
+                    // load training data
+                        //Load live data
+                        inputString = (String) msg.obj;
+
+                        if (inputString != null && inputString.length() > 0) {
+                            StringBuilder sb = new StringBuilder(inputString);
+                            String res = "";
+                            for(int i = 0; i < sb.length(); i++){
+                                if(sb.charAt(i) != ',' && sb.charAt(i) != 'h' && sb.charAt(i) != ' '){
+                                    res += sb.charAt(i);
+                                }else {
+                                    if(n <= 120){
+                                        if(!res.equals("")){
+                                            Log.d("RES", res);
+                                            liveDataString[n] = res;
+                                            liveData[n] = Double.parseDouble(liveDataString[n]); // Another common reason for NumberFormatException is the alphanumeric input. No non-numeric letter other than + and - is not permitted in the input string.
+                                            Log.i("CONTENT", ""+liveData[n]);
+                                            n++;
+                                            res = "";
+                                            Log.d("INDEX", ""+n);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    if (n >= 100){
+
+                        tempTrain.add(new DenseInstance(1.0,liveData));
+                        int classIndex = tempTrain.numAttributes()-1;
+                        int numInstances = tempTrain.numInstances()-1;
+                        double classLabel = 0;
+                        try {
+                            classLabel = tree.classifyInstance(tempTrain.instance(numInstances));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        tempTrain.instance(numInstances).setClassValue(classLabel);
+                        String gesture = tempTrain.instance(numInstances).attribute(classIndex).value((int)classLabel);
+                        Log.d("GESTURE",gesture);
+                        txtGesture.setText(gesture);
+                        try {
+                            sendGesture(gesture);
+                        } catch (MqttException e) {
+                            e.printStackTrace();
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                        Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
+
+                        n = 0;
+                    }
+
+
+                }
+                }
+
+        };
+
+
+    }
 
     @Override
     public void onResume() {
@@ -323,6 +259,43 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.connect:
+                pahoMqttClient = new PahoMqttClient();
+                client = pahoMqttClient.getMqttClient(getApplicationContext(), Constants.MQTT_BROKER_URL, Constants.CLIENT_ID);
+                Intent intent = new Intent(MainActivity.this, MqttMessageService.class);
+                startService(intent);
+                break;
+
+            case R.id.subscribe:
+                String topic = subscribeTopic.getText().toString().trim();
+                if (!topic.isEmpty()) {
+                    try {
+                        pahoMqttClient.subscribe(client, topic, 1);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+
+            case R.id.unSubscribe:
+                String topic1 = unSubscribeTopic.getText().toString().trim();
+                if (!topic1.isEmpty()) {
+                    try {
+                        pahoMqttClient.unSubscribe(client, topic1);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+        }
+    }
+
+
+
 
     //create new class for connect thread
     private class ConnectedThread extends Thread {
