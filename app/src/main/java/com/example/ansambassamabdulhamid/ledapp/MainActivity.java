@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     TextView txtGesture;
     Handler bluetoothIn;
 
-    final int handlerState = 0;        				 //used to identify handler message
+    final int handlerState = 1;        				 //used to identify handler message
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
     private String[] liveDataString = new String[120];
@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ConnectedThread mConnectedThread;
 
     int n = 0;
+    int counter =0;
 
     // SPP UUID service - this should work for most devices
     private static final UUID BTMODULEUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
@@ -72,11 +73,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         BufferedReader breader = null;
         try {
             breader = new BufferedReader(
-                    new InputStreamReader(getAssets().open("all_train_data.arff")));
-            train = new Instances (breader);
+                    new InputStreamReader(getAssets().open("smoothed_train_data.arff")));
+                      train = new Instances (breader);
             tempTrain = new Instances(train);
             train.setClassIndex(train.numAttributes() -1);
-            tempTrain.setClassIndex(tempTrain.numAttributes() -1);
+            tempTrain.setClassIndex(train.numAttributes() -1);
             tempTrain.clear();
 
             tree = new J48();         // new instance of tree
@@ -131,6 +132,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private class BluetoothReader extends Thread{
 
     }
+    private void NewDataSet(String str){
+
+    }
 
     private void bluetoothReader(){
 
@@ -139,15 +143,65 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (msg.what == handlerState) {//if message is what we want
                     // load training data
                         //Load live data
-                        inputString = (String) msg.obj;
+                   // inputString = msg.obj.toString();
 
-                        if (inputString != null && inputString.length() > 0) {
+                   byte[] writeBuff = (byte[]) msg.obj;
+                    int begin = (int)msg.arg1;
+                    int end = (int)msg.arg2;
+
+                    String s = new String(writeBuff);
+                    inputString = s.substring(begin,end);
+
+                        Log.d("INPUTSTRING",inputString);
+                    String [] nydataArray = inputString.split(",");
+                    if (nydataArray.length>= 7 && nydataArray[0].equals("h")){
+                        liveDataString[6 * counter]= nydataArray[1];
+                        liveDataString[6 * counter+1]= nydataArray[2];
+                        liveDataString[6 * counter+2]= nydataArray[3];
+                        liveDataString[6 * counter+3]= nydataArray[4];
+                        liveDataString[6 * counter+4]= nydataArray[5];
+                        liveDataString[6 * counter+5]= nydataArray[6];
+                        counter++;
+                    }
+                    if (counter> 19){
+                        for (int i = 0; i <liveDataString.length; i++){
+                            liveData[i] = Integer.parseInt(liveDataString[i]);
+                        }
+                        counter = 0;
+                        tempTrain.add(new DenseInstance(1.0,liveData));
+                        int classIndex = tempTrain.numAttributes()-1;
+                        int numInstances = tempTrain.numInstances()-1;
+                        double classLabel = 0;
+                        try {
+                            classLabel = tree.classifyInstance(tempTrain.instance(numInstances));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        tempTrain.instance(numInstances).setClassValue(classLabel);
+                        String gesture = tempTrain.instance(numInstances).attribute(classIndex).value((int)classLabel);
+                        Log.d("GESTURE",gesture);
+                        txtGesture.setText(gesture);
+                       /* try {
+                            sendGesture(gesture);
+                        } catch (MqttException e) {
+                            e.printStackTrace();
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }*/
+                        Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
+
+                    }
+
+
+                      /*  if (inputString != null && inputString.length() > 0) {
                             StringBuilder sb = new StringBuilder(inputString);
                             String res = "";
                             for(int i = 0; i < sb.length(); i++){
+
                                 if(sb.charAt(i) != ',' && sb.charAt(i) != 'h' && sb.charAt(i) != ' '){
                                     res += sb.charAt(i);
-                                }else {
+                                }
+                                else {
                                     if(n <= 120){
                                         if(!res.equals("")){
                                             Log.d("RES", res);
@@ -161,8 +215,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     }
                                 }
                             }
-                        }
-                    if (n >= 100){
+                        } */
+                 /*   if (n > 119){
 
                         tempTrain.add(new DenseInstance(1.0,liveData));
                         int classIndex = tempTrain.numAttributes()-1;
@@ -187,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
 
                         n = 0;
-                    }
+                    } */
 
 
                 }
@@ -319,11 +373,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         public void run() {
-            byte[] buffer = new byte[256];
-            int bytes;
+        //    byte[] buffer = new byte[256];
+          //  int bytes;
+            byte[] buffer = new byte[1024];
+            int begin =0;
+            int bytes = 0;
+
+            while (true){
+                try{
+                    bytes+=mmInStream.read(buffer,bytes,buffer.length-bytes);
+                    for (int i = begin; i <bytes; i++){
+                        if (buffer[i] == '\n'){
+                            bluetoothIn.obtainMessage(handlerState, begin, i, buffer).sendToTarget();
+                            begin = i +1;
+                            if (i == bytes-1){
+                                bytes = 0;
+                                begin = 0;
+
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
 
             // Keep looping to listen for received messages
-            while (true) {
+           /* while (true) {
                 try {
                     bytes = mmInStream.read(buffer);        	//read bytes from input buffer
                     String readMessage = new String(buffer, 0, bytes);
@@ -332,7 +408,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } catch (IOException e) {
                     break;
                 }
-            }
+            }*/
         }
     }
 }
