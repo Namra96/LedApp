@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private BluetoothAdapter btAdapter = null;
     private BluetoothSocket btSocket = null;
     private String[] liveDataString = new String[120];
-    private Instances tempTrain;
+    private static Instances tempTrain;
 
     private ConnectedThread mConnectedThread;
 
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static String address;
 
     private double[] liveData = new double[121];
-    Instances train;
+    static Instances train;
     static J48 tree;
 
     @Override
@@ -69,17 +69,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initialise();
+        btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
+        checkBTState();
 
         BufferedReader breader = null;
         try {
             breader = new BufferedReader(
-                    new InputStreamReader(getAssets().open("smoothed_train_data.arff")));
+                    new InputStreamReader(getAssets().open("TEST1IOT.arff")));
                       train = new Instances (breader);
             tempTrain = new Instances(train);
             train.setClassIndex(train.numAttributes() -1);
-            tempTrain.setClassIndex(train.numAttributes() -1);
+            tempTrain.setClassIndex(tempTrain.numAttributes() -1);
             tempTrain.clear();
-
             tree = new J48();         // new instance of tree
             try {
                 tree.buildClassifier(train);
@@ -87,9 +88,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e.printStackTrace();
             }
 
-            btAdapter = BluetoothAdapter.getDefaultAdapter();       // get Bluetooth adapter
-        checkBTState();
-        bluetoothReader();
+
+            tree = new J48();         // new instance of tree
+            try {
+                tree.buildClassifier(train);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            bluetoothReader();
+
     } catch (IOException e) {
             e.printStackTrace();
         }
@@ -115,16 +122,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void sendGesture(String gesture) throws MqttException, UnsupportedEncodingException {
         switch (gesture){
             case "right":
-                    pahoMqttClient.publishMessage(client, "right", 1, Constants.PUBLISH_TOPIC);
+                    pahoMqttClient.publishMessage(client, "2", 1, Constants.PUBLISH_TOPIC);
                 break;
             case "left":
-                pahoMqttClient.publishMessage(client, "left", 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "4", 1, Constants.PUBLISH_TOPIC);
                 break;
             case "up":
-                pahoMqttClient.publishMessage(client, "up", 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "1", 1, Constants.PUBLISH_TOPIC);//tiltright = 5
                 break;
             case "down":
-                pahoMqttClient.publishMessage(client, "down", 1, Constants.PUBLISH_TOPIC);
+                pahoMqttClient.publishMessage(client, "3", 1, Constants.PUBLISH_TOPIC); //titltleft = 6
                 break;
         }
     }
@@ -140,6 +147,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         bluetoothIn = new Handler() {
             public void handleMessage(Message msg) {
+
                 if (msg.what == handlerState) {//if message is what we want
                     // load training data
                         //Load live data
@@ -163,7 +171,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         liveDataString[6 * counter+5]= nydataArray[6];
                         counter++;
                     }
+
                     if (counter> 19){
+                        Log.d("In-forloop","------------------------------------------------------------20 values");
                         for (int i = 0; i <liveDataString.length; i++){
                             liveData[i] = Integer.parseInt(liveDataString[i]);
                         }
@@ -181,15 +191,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String gesture = tempTrain.instance(numInstances).attribute(classIndex).value((int)classLabel);
                         Log.d("GESTURE",gesture);
                         txtGesture.setText(gesture);
-                       /* try {
+                     /*   try {
                             sendGesture(gesture);
                         } catch (MqttException e) {
                             e.printStackTrace();
                         } catch (UnsupportedEncodingException e) {
                             e.printStackTrace();
-                        }*/
-                        Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
+                        } */
 
+                        Log.d("BREAK","-------------------------------------------------------------------------------------------------------");
                     }
 
 
