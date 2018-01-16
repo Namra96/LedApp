@@ -79,9 +79,11 @@ public class PahoMqttClient {
         MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(false);
         mqttConnectOptions.setAutomaticReconnect(true);
-        //mqttConnectOptions.setWill(Constants.PUBLISH_TOPIC, "I am going offline".getBytes(), 1, true);
-        mqttConnectOptions.setUserName("hhtwzgqn");
-        mqttConnectOptions.setPassword("orQjVS3c6MAi".toCharArray());
+     //   mqttConnectOptions.setWill(Constants.PUBLISH_TOPIC, "I am going offline".getBytes(), 1, true);
+       // mqttConnectOptions.setUserName("hhtwzgqn");
+       // mqttConnectOptions.setPassword("orQjVS3c6MAi".toCharArray());
+       mqttConnectOptions.setUserName("iuzfrvrt");
+        mqttConnectOptions.setPassword("bwga1O6mKfiO".toCharArray());
         return mqttConnectOptions;
     }
 
@@ -93,7 +95,7 @@ public class PahoMqttClient {
         encodedPayload = msg.getBytes("UTF-8");
         MqttMessage message = new MqttMessage(encodedPayload);
         message.setId(320);
-        message.setRetained(true);
+        message.setRetained(false);
         message.setQos(qos);
         client.publish(topic, message);
     }

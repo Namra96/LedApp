@@ -4,63 +4,70 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/holo_blue_light"
     android:orientation="vertical"
     tools:context="com.example.ansambassamabdulhamid.ledapp.MainActivity">
-<LinearLayout
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:layout_gravity="center_horizontal"
-    android:weightSum="1">
-
-    <Button
-        android:id="@+id/connect"
-        android:layout_width="200dp"
-        android:layout_height="wrap_content"
-        android:text="Connect to Cloud"
-        android:layout_gravity="center_horizontal" />
-</LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
-    <EditText
-        android:id="@+id/subscribeTopic"
-        android:layout_width="178dp"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="Subscribe topic"
-        android:inputType="textPersonName"
-        android:layout_marginStart="16dp" />
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:weightSum="1">
 
-    <Button
-        android:id="@+id/subscribe"
-        android:layout_width="124dp"
-        android:layout_height="48dp"
-        android:text="Subscribe"
-        app:layout_constraintHorizontal_bias="0.0"
-        android:layout_marginEnd="8dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Welcome to Hand Gesture Recognition app"
+            android:textSize="18dp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/subscribeTopic"
+            android:layout_width="178dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:ems="10"
+            android:hint="Subscribe topic"
+            android:inputType="textPersonName" />
+
+        <Button
+            android:id="@+id/subscribe"
+            android:layout_width="124dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/colorPrimary"
+            android:text="Subscribe"
+            app:layout_constraintHorizontal_bias="0.0" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:orientation="horizontal">
 
         <EditText
             android:id="@+id/unSubscribeTopic"
             android:layout_width="180dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
             android:ems="10"
             android:hint="Unsubscribe topic"
-            android:layout_marginStart="16dp"
             android:inputType="textPersonName" />
 
         <Button
             android:id="@+id/unSubscribe"
             android:layout_width="124dp"
             android:layout_height="48dp"
+            android:background="@color/colorPrimary"
             android:text="UnSubscribe" />
     </LinearLayout>
 
@@ -70,9 +77,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="My Gesture"
         android:layout_marginTop="20dp"
-        android:textSize="20dp"/>
+        android:text="My Gesture"
+        android:textSize="20dp" />
 
     <TextView
         android:id="@+id/tv_receivedGesture"
@@ -80,10 +87,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="20dp"
-        android:textStyle="bold"
-        android:textSize="20dp"/>
-
-
+        android:textSize="20dp"
+        android:textStyle="bold" />
 
 
 </LinearLayout>

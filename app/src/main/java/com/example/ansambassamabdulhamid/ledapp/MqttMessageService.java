@@ -1,6 +1,5 @@
 package com.example.ansambassamabdulhamid.ledapp;
 
-import android.app.Service;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -29,7 +28,10 @@ public class MqttMessageService extends Service {
         private PahoMqttClient pahoMqttClient;
         private MqttAndroidClient mqttAndroidClient;
 
+
+
         public MqttMessageService() {
+
         }
 
         @Override
@@ -39,7 +41,9 @@ public class MqttMessageService extends Service {
 
             //Receiving MQTT message
             pahoMqttClient = new PahoMqttClient();
+
             mqttAndroidClient = pahoMqttClient.getMqttClient(getApplicationContext(), Constants.MQTT_BROKER_URL, Constants.CLIENT_ID);
+
 
             mqttAndroidClient.setCallback(new MqttCallbackExtended() {
                 @Override
@@ -53,8 +57,11 @@ public class MqttMessageService extends Service {
                 }
 
                 @Override
-                public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
-                    setMessageNotification(s, new String(mqttMessage.getPayload()));
+                public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+                    setMessageNotification(topic, new String(mqttMessage.getPayload()));
+                  //  MainActivity.connect.recievedMessage(topic,mqttMessage.toString());
+                    Log.d("MESSAGE", "FROM CLOUD" + mqttMessage.toString());
+
                 }
 
                 @Override
